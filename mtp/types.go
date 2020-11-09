@@ -116,7 +116,7 @@ type StorageInfo struct {
 }
 
 func (d *StorageInfo) IsHierarchical() bool {
-        return d.FilesystemType == FST_GenericHierarchical
+	return d.FilesystemType == FST_GenericHierarchical
 }
 
 func (d *StorageInfo) IsDCF() bool {
@@ -166,3 +166,5 @@ type usbBulkContainer struct {
 
 const usbHdrLen = 2*2 + 2*4
 const usbBulkLen = 5*4 + usbHdrLen
+
+type ProgressFunc func(sent int64) error

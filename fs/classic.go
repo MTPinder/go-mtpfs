@@ -94,7 +94,7 @@ func (n *classicNode) send() error {
 		log.Printf("SendObjectInfo failed %v", err)
 		return syscall.EINVAL
 	}
-	if err = n.fs.dev.SendObject(backing, fi.Size()); err != nil {
+	if err = n.fs.dev.SendObject(backing, fi.Size(), mtp.EmptyProgressFunc); err != nil {
 		log.Printf("SendObject failed %v", err)
 		return syscall.EINVAL
 	}
@@ -152,7 +152,7 @@ func (n *classicNode) fetch() error {
 	defer f.Close()
 
 	start := time.Now()
-	err = n.fs.dev.GetObject(n.Handle(), f)
+	err = n.fs.dev.GetObject(n.Handle(), f, mtp.EmptyProgressFunc)
 	dt := time.Now().Sub(start)
 	if err == nil {
 		n.backing = f.Name()

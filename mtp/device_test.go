@@ -84,7 +84,7 @@ func TestAndroid(t *testing.T) {
 	} else {
 		buf := bytes.NewBuffer(data)
 		t.Logf("Sent objectinfo handle: 0x%x\n", handle)
-		err = dev.SendObject(buf, int64(len(data)))
+		err = dev.SendObject(buf, int64(len(data)), EmptyProgressFunc)
 		if err != nil {
 			t.Log("SendObject failed:", err)
 		}
@@ -117,7 +117,7 @@ func TestAndroid(t *testing.T) {
 	}
 
 	buf = &bytes.Buffer{}
-	err = dev.GetObject(handle, buf)
+	err = dev.GetObject(handle, buf, EmptyProgressFunc)
 	if err != nil {
 		t.Errorf("GetObject: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestAndroid(t *testing.T) {
 		t.Errorf("AndroidEndEditObject: %v", err)
 	}
 	buf = &bytes.Buffer{}
-	err = dev.GetObject(handle, buf)
+	err = dev.GetObject(handle, buf, EmptyProgressFunc)
 	if err != nil {
 		t.Errorf("GetObject: %v", err)
 	}
@@ -363,7 +363,7 @@ func TestDeviceStorage(t *testing.T) {
 		t.Fatalf("SendObjectInfo failed: %s", err)
 	} else {
 		t.Logf("Sent objectinfo handle: 0x%x\n", handle)
-		err = dev.SendObject(buf, int64(len(data)))
+		err = dev.SendObject(buf, int64(len(data)), EmptyProgressFunc)
 		if err != nil {
 			t.Log("SendObject failed:", err)
 		}
@@ -412,7 +412,7 @@ func TestDeviceStorage(t *testing.T) {
 	}
 
 	backBuf := &bytes.Buffer{}
-	err = dev.GetObject(handle, backBuf)
+	err = dev.GetObject(handle, backBuf, EmptyProgressFunc)
 	if err != nil {
 		t.Fatalf("GetObject failed: %v", err)
 	} else {

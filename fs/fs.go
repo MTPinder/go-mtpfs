@@ -610,7 +610,7 @@ func (n *folderNode) Create(ctx context.Context, name string, flags uint32, mode
 			return
 		}
 
-		if err = n.fs.dev.SendObject(&bytes.Buffer{}, 0); err != nil {
+		if err = n.fs.dev.SendObject(&bytes.Buffer{}, 0, mtp.EmptyProgressFunc); err != nil {
 			log.Println("SendObject failed:", err)
 			errno = syscall.EIO
 			return

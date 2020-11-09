@@ -70,6 +70,11 @@ func (d *Device) sendMaxPacketSize() int {
 	return d.dev.GetMaxPacketSize(d.sendEP)
 }
 
+// empty placeholder function for progress callback
+func EmptyProgressFunc(_ int64) error {
+	return nil
+}
+
 // Close releases the interface, and closes the device.
 func (d *Device) Close() error {
 	if d.h == nil {
@@ -81,7 +86,7 @@ func (d *Device) Close() error {
 		req.Code = OC_CloseSession
 		// RunTransaction runs close, so can't use CloseSession().
 
-		if err := d.runTransaction(&req, &rep, nil, nil, 0); err != nil {
+		if err := d.runTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc); err != nil {
 			err := d.h.Reset()
 			if d.USBDebug {
 				log.Printf("USB: Reset, err: %v", err)
@@ -289,12 +294,12 @@ func (s SyncError) Error() string {
 // IDs, USB errors (BUSY, IO, ACCESS etc.), and receiving data for
 // operations that expect no data.
 func (d *Device) RunTransaction(req *Container, rep *Container,
-	dest io.Writer, src io.Reader, writeSize int64) error {
+	dest io.Writer, src io.Reader, writeSize int64, progressCb ProgressFunc) error {
 	if d.h == nil {
 		return fmt.Errorf("mtp: cannot run operation %v, device is not open",
 			OC_names[int(req.Code)])
 	}
-	if err := d.runTransaction(req, rep, dest, src, writeSize); err != nil {
+	if err := d.runTransaction(req, rep, dest, src, writeSize, progressCb); err != nil {
 		_, ok2 := err.(SyncError)
 		_, ok1 := err.(usb.Error)
 		if ok1 || ok2 {
@@ -309,7 +314,7 @@ func (d *Device) RunTransaction(req *Container, rep *Container,
 // runTransaction is like RunTransaction, but without sanity checking
 // before and after the call.
 func (d *Device) runTransaction(req *Container, rep *Container,
-	dest io.Writer, src io.Reader, writeSize int64) error {
+	dest io.Writer, src io.Reader, writeSize int64, progressCb ProgressFunc) error {
 	var finalPacket []byte
 	if d.session != nil {
 		req.SessionID = d.session.sid
@@ -336,7 +341,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 			TransactionID: req.TransactionID,
 		}
 
-		_, err := d.bulkWrite(&hdr, src, writeSize)
+		_, err := d.bulkWrite(&hdr, src, writeSize, progressCb)
 		if err != nil {
 			return err
 		}
@@ -366,7 +371,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 		if len(rest)+usbHdrLen == fetchPacketSize {
 			// If this was a full packet, read until we
 			// have a short read.
-			_, finalPacket, err = d.bulkRead(dest)
+			_, finalPacket, err = d.bulkRead(dest, progressCb)
 			if err != nil {
 				return err
 			}
@@ -421,7 +426,8 @@ func (d *Device) dataPrint(ep byte, data []byte) {
 const rwBufSize = 0x4000
 
 // bulkWrite returns the number of non-header bytes written.
-func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64) (n int64, err error) {
+func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, progressCb ProgressFunc) (n int64, err error) {
+	totalSize := size
 	packetSize := d.sendMaxPacketSize()
 	if hdr != nil {
 		if size+usbHdrLen > 0xFFFFFFFF {
@@ -453,10 +459,15 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64) (n int64
 		}
 		size -= cpSize
 		n += cpSize
+
+		if err = progressCb(totalSize - size); err != nil {
+			return cpSize, err
+		}
 	}
 
 	var buf [rwBufSize]byte
 	var lastTransfer int
+
 	for size > 0 {
 		var m int
 		toread := buf[:]
@@ -477,7 +488,12 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64) (n int64
 		if err != nil || lastTransfer == 0 {
 			break
 		}
+
+		if err = progressCb(totalSize - size); err != nil {
+			return size, err
+		}
 	}
+
 	if lastTransfer%packetSize == 0 {
 		// write a short packet just to be sure.
 		d.h.BulkTransfer(d.sendEP, buf[:0], d.Timeout)
@@ -486,15 +502,17 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64) (n int64
 	return n, err
 }
 
-func (d *Device) bulkRead(w io.Writer) (n int64, lastPacket []byte, err error) {
+func (d *Device) bulkRead(w io.Writer, progressCb ProgressFunc) (n int64, lastPacket []byte, err error) {
 	var buf [rwBufSize]byte
 	var lastRead int
+
 	for {
 		toread := buf[:]
 		lastRead, err = d.h.BulkTransfer(d.fetchEP, toread, d.Timeout)
 		if err != nil {
 			break
 		}
+
 		if lastRead > 0 {
 			d.dataPrint(d.fetchEP, buf[:lastRead])
 
@@ -504,6 +522,11 @@ func (d *Device) bulkRead(w io.Writer) (n int64, lastPacket []byte, err error) {
 				break
 			}
 		}
+
+		if err = progressCb(n); err != nil {
+			break
+		}
+
 		if d.MTPDebug {
 			log.Printf("MTP bulk read 0x%x bytes.", lastRead)
 		}
@@ -522,8 +545,14 @@ func (d *Device) bulkRead(w io.Writer) (n int64, lastPacket []byte, err error) {
 		if d.MTPDebug {
 			log.Printf("Expected null packet, read %d bytes", nullReadSize)
 		}
+
+		if err = progressCb(n); err != nil {
+			return n, buf[:nullReadSize], err
+		}
+
 		return n, buf[:nullReadSize], err
 	}
+
 	return n, buf[:0], err
 }
 

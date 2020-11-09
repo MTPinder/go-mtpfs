@@ -29,7 +29,7 @@ func (d *Device) OpenSession() error {
 
 	// If opening the session fails, we want to be able to reset
 	// the device, so don't do sanity checks afterwards.
-	if err := d.runTransaction(&req, &rep, nil, nil, 0); err != nil {
+	if err := d.runTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc); err != nil {
 		return err
 	}
 
@@ -44,7 +44,7 @@ func (d *Device) OpenSession() error {
 func (d *Device) CloseSession() error {
 	var req, rep Container
 	req.Code = OC_CloseSession
-	err := d.RunTransaction(&req, &rep, nil, nil, 0)
+	err := d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 	d.session = nil
 	return err
 }
@@ -52,7 +52,7 @@ func (d *Device) CloseSession() error {
 func (d *Device) GetData(req *Container, info interface{}) error {
 	var buf bytes.Buffer
 	var rep Container
-	if err := d.RunTransaction(req, &rep, &buf, nil, 0); err != nil {
+	if err := d.RunTransaction(req, &rep, &buf, nil, 0, EmptyProgressFunc); err != nil {
 		return err
 	}
 	err := Decode(&buf, info)
@@ -103,7 +103,7 @@ func (d *Device) SendData(req *Container, rep *Container, value interface{}) err
 	if d.MTPDebug {
 		log.Printf("MTP encoded %#v", value)
 	}
-	return d.RunTransaction(req, rep, nil, &buf, int64(buf.Len()))
+	return d.RunTransaction(req, rep, nil, &buf, int64(buf.Len()), EmptyProgressFunc)
 }
 
 func (d *Device) GetObjectPropsSupported(objFormatCode uint16, props *Uint16Array) error {
@@ -139,7 +139,7 @@ func (d *Device) ResetDevicePropValue(propCode uint32) error {
 	var req, rep Container
 	req.Code = OC_ResetDevicePropValue
 	req.Param = []uint32{propCode}
-	return d.RunTransaction(&req, &rep, nil, nil, 0)
+	return d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 }
 
 func (d *Device) GetStorageInfo(ID uint32, info *StorageInfo) error {
@@ -167,7 +167,7 @@ func (d *Device) GetNumObjects(storageId uint32, formatCode uint16, parent uint3
 	var req, rep Container
 	req.Code = OC_GetNumObjects
 	req.Param = []uint32{storageId, uint32(formatCode), parent}
-	if err := d.RunTransaction(&req, &rep, nil, nil, 0); err != nil {
+	if err := d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc); err != nil {
 		return 0, err
 	}
 	return rep.Param[0], nil
@@ -178,7 +178,7 @@ func (d *Device) DeleteObject(handle uint32) error {
 	req.Code = OC_DeleteObject
 	req.Param = []uint32{handle, 0x0}
 
-	return d.RunTransaction(&req, &rep, nil, nil, 0)
+	return d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 }
 
 func (d *Device) SendObjectInfo(wantStorageID, wantParent uint32, info *ObjectInfo) (storageID, parent, handle uint32, err error) {
@@ -198,23 +198,23 @@ func (d *Device) SendObjectInfo(wantStorageID, wantParent uint32, info *ObjectIn
 	return rep.Param[0], rep.Param[1], rep.Param[2], nil
 }
 
-func (d *Device) SendObject(r io.Reader, size int64) error {
+func (d *Device) SendObject(r io.Reader, size int64, progressCb ProgressFunc) error {
 	var req, rep Container
 	req.Code = OC_SendObject
-	return d.RunTransaction(&req, &rep, nil, r, size)
+	return d.RunTransaction(&req, &rep, nil, r, size, progressCb)
 }
 
-func (d *Device) GetObject(handle uint32, w io.Writer) error {
+func (d *Device) GetObject(handle uint32, w io.Writer, progressCb ProgressFunc) error {
 	var req, rep Container
 	req.Code = OC_GetObject
 	req.Param = []uint32{handle}
 
-	return d.RunTransaction(&req, &rep, w, nil, 0)
+	return d.RunTransaction(&req, &rep, w, nil, 0, progressCb)
 }
 
 func (d *Device) GetPartialObject(handle uint32, w io.Writer, offset uint32, size uint32) error {
 	var req, rep Container
 	req.Code = OC_ANDROID_GET_PARTIAL_OBJECT64
 	req.Param = []uint32{handle, offset, size}
-	return d.RunTransaction(&req, &rep, w, nil, 0)
+	return d.RunTransaction(&req, &rep, w, nil, 0, EmptyProgressFunc)
 }

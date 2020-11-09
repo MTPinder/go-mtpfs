@@ -34,7 +34,7 @@ func (d *Device) AndroidGetPartialObject64(handle uint32, w io.Writer, offset in
 	var req, rep Container
 	req.Code = OC_ANDROID_GET_PARTIAL_OBJECT64
 	req.Param = []uint32{handle, uint32(offset & 0xFFFFFFFF), uint32(offset >> 32), size}
-	return d.RunTransaction(&req, &rep, w, nil, 0)
+	return d.RunTransaction(&req, &rep, w, nil, 0, EmptyProgressFunc)
 }
 
 // AndroidBeginEditObject opens a file for writing.
@@ -43,7 +43,7 @@ func (d *Device) AndroidBeginEditObject(handle uint32) error {
 
 	req.Code = OC_ANDROID_BEGIN_EDIT_OBJECT
 	req.Param = []uint32{handle}
-	return d.RunTransaction(&req, &rep, nil, nil, 0)
+	return d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 }
 
 // AndroidTruncate truncates at a file at a given length.
@@ -52,7 +52,7 @@ func (d *Device) AndroidTruncate(handle uint32, offset int64) error {
 
 	req.Code = OC_ANDROID_TRUNCATE_OBJECT
 	req.Param = []uint32{handle, uint32(offset & 0xFFFFFFFF), uint32(offset >> 32)}
-	return d.RunTransaction(&req, &rep, nil, nil, 0)
+	return d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 }
 
 // AndroidSendPartialObject writes a section of a file.
@@ -66,7 +66,7 @@ func (d *Device) AndroidSendPartialObject(handle uint32, offset int64, size uint
 	// rather than pwrite to send the data for data coming with
 	// the header packet
 	d.SeparateHeader = true
-	err := d.RunTransaction(&req, &rep, nil, r, int64(size))
+	err := d.RunTransaction(&req, &rep, nil, r, int64(size), EmptyProgressFunc)
 	d.SeparateHeader = false
 	return err
 }
@@ -77,5 +77,5 @@ func (d *Device) AndroidEndEditObject(handle uint32) error {
 
 	req.Code = OC_ANDROID_END_EDIT_OBJECT
 	req.Param = []uint32{handle}
-	return d.RunTransaction(&req, &rep, nil, nil, 0)
+	return d.RunTransaction(&req, &rep, nil, nil, 0, EmptyProgressFunc)
 }
