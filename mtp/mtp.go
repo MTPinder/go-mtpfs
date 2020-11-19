@@ -221,7 +221,7 @@ func (d *Device) sendReq(req *Container) error {
 
 	binary.Write(buf, binary.LittleEndian, c.usbBulkHeader)
 	if err := binary.Write(buf, binary.LittleEndian, c.Param[:len(req.Param)]); err != nil {
-		panic(err)
+		return err
 	}
 
 	d.dataPrint(d.sendEP, buf.Bytes())
