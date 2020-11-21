@@ -62,7 +62,10 @@ func FindDevices(c *usb.Context) ([]*Device, error) {
 			cands = append(cands, cand)
 		}
 	}
-	l.Done()
+
+	if len(l) > 0 {
+		l.Done()
+	}
 
 	return cands, nil
 }
