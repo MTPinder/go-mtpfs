@@ -31,7 +31,7 @@ go build ./
   This will leave a binary `go-mtpfs`
 
 * You may need some tweaking to get libusb to compile.  See the
-  comment near the top of https://github.com/hanwen/usb/usb.go.
+  comment near the top of https://github.com/ganeshrvel/usb/usb.go.
 
 * 32-bit and 64-bit linux x86 binaries are at
 
