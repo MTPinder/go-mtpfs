@@ -147,3 +147,26 @@ func SelectDevice(pattern string) (*Device, error) {
 
 	return selectDevice(devs, pattern)
 }
+
+// SelectDeviceForDebugging returns opened MTP device that matches the given pattern and debug information are set true
+func SelectDeviceWithDebugging(pattern string, allowDebugging bool) (*Device, error) {
+	c := usb.NewContext()
+
+	devs, err := FindDevices(c)
+	if err != nil {
+		return nil, err
+	}
+	if len(devs) == 0 {
+		return nil, fmt.Errorf("no MTP devices found")
+	}
+
+	if allowDebugging {
+		for _, _dev := range devs {
+			_dev.USBDebug = allowDebugging
+			_dev.DataDebug = allowDebugging
+			_dev.MTPDebug = allowDebugging
+		}
+	}
+
+	return selectDevice(devs, pattern)
+}
