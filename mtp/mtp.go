@@ -169,6 +169,10 @@ func (d *Device) Open() error {
 			return err
 		}
 
+		if d.USBDebug {
+			log.Printf("USB: interface: %s", iface)
+		}
+
 		// support for older samsung phones
 		if !strings.Contains(iface, "MTP") && !strings.Contains(iface, "CDC") && !strings.Contains(iface, "ACM") {
 			d.Close()
