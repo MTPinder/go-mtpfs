@@ -207,6 +207,14 @@ func (d *Device) ID() (string, error) {
 	return strings.Join(ids, " "), nil
 }
 
+func (d *Device) GetDeviceDescriptor() (*usb.DeviceDescriptor, error) {
+	if d.h == nil {
+		return nil, fmt.Errorf("mtp: ID: device not open")
+	}
+
+	return &d.devDescr, nil
+}
+
 func (d *Device) sendReq(req *Container) error {
 	c := usbBulkContainer{
 		usbBulkHeader: usbBulkHeader{
