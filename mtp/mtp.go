@@ -46,6 +46,22 @@ type Device struct {
 	session *sessionData
 }
 
+type UsbDeviceInfo struct {
+	// USB-IF vendor ID.
+	IdVendor uint16
+	// USB-IF product ID.
+	IdProduct uint16
+	// Device release number in binary-coded decimal.
+	Device uint16
+
+	// Index of string descriptor describing manufacturer.
+	Manufacturer string
+	// Index of string descriptor describing product.
+	Product string
+	// Index of string descriptor containing device serial number.
+	SerialNumber string
+}
+
 type sessionData struct {
 	tid uint32
 	sid uint32
@@ -207,12 +223,45 @@ func (d *Device) ID() (string, error) {
 	return strings.Join(ids, " "), nil
 }
 
-func (d *Device) GetDeviceDescriptor() (*usb.DeviceDescriptor, error) {
+func (d *Device) GetUsbInfo() (*UsbDeviceInfo, error) {
 	if d.h == nil {
 		return nil, fmt.Errorf("mtp: ID: device not open")
 	}
 
-	return &d.devDescr, nil
+	ui := UsbDeviceInfo{
+		IdVendor:  d.devDescr.IdVendor,
+		IdProduct: d.devDescr.IdProduct,
+		Device:    d.devDescr.Device,
+	}
+
+	manufacturer, err := d.h.GetStringDescriptorASCII(d.devDescr.Manufacturer)
+	if err != nil {
+		if d.USBDebug {
+			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+		}
+		return nil, err
+	}
+	ui.Manufacturer = manufacturer
+
+	serialNumber, err := d.h.GetStringDescriptorASCII(d.devDescr.SerialNumber)
+	if err != nil {
+		if d.USBDebug {
+			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+		}
+		return nil, err
+	}
+	ui.SerialNumber = serialNumber
+
+	product, err := d.h.GetStringDescriptorASCII(d.devDescr.Product)
+	if err != nil {
+		if d.USBDebug {
+			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+		}
+		return nil, err
+	}
+	ui.Product = product
+
+	return &ui, nil
 }
 
 func (d *Device) sendReq(req *Container) error {
