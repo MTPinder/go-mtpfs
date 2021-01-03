@@ -4,6 +4,8 @@ github.com/ganeshrvel/usb v0.0.0-20201129082049-b90de8e0558d h1:enmxOdGQx56j7BEx
 github.com/ganeshrvel/usb v0.0.0-20201129082049-b90de8e0558d/go.mod h1:2UUL4RuHDu1vhgX8t/QkPZqj2GaW/SCtTYdhx+Gxv5c=
 github.com/ganeshrvel/usb v0.0.0-20201130204447-29e43d6461a3 h1:XKZvH8dyyZyPTSFJZGJrONEPVci3zy/L3SqPCXW5HoU=
 github.com/ganeshrvel/usb v0.0.0-20201130204447-29e43d6461a3/go.mod h1:2UUL4RuHDu1vhgX8t/QkPZqj2GaW/SCtTYdhx+Gxv5c=
+github.com/ganeshrvel/usb v0.0.0-20210103155855-14d96f5ae403 h1:TV7BaPjblLxwKn0pv5d9xDEMp0KrP+KT4DeoNPK8npk=
+github.com/ganeshrvel/usb v0.0.0-20210103155855-14d96f5ae403/go.mod h1:2UUL4RuHDu1vhgX8t/QkPZqj2GaW/SCtTYdhx+Gxv5c=
 github.com/hanwen/go-fuse v1.0.0 h1:GxS9Zrn6c35/BnfiVsZVWmsG803xwE7eVRDvcf/BEVc=
 github.com/hanwen/go-fuse v1.0.0/go.mod h1:unqXarDXqzAk0rt98O2tVndEPIpUgLD9+rwFisZH3Ok=
 github.com/hanwen/go-fuse/v2 v2.0.2 h1:BtsqKI5RXOqDMnTgpCb0IWgvRgGLJdqYVZ/Hm6KgKto=
