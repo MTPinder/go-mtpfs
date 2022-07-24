@@ -210,14 +210,23 @@ func (d *Device) ID() (string, error) {
 		d.devDescr.Manufacturer,
 		d.devDescr.Product,
 		d.devDescr.SerialNumber} {
-		s, err := d.h.GetStringDescriptorASCII(b)
-		if err != nil {
-			if d.USBDebug {
-				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+		var descriptor string
+		if b == 0 {
+			// All three of the descriptors are optional.
+			// Index of 0 means the string is not available.
+			descriptor = ""
+		} else {
+			s, err := d.h.GetStringDescriptorASCII(b)
+			if err != nil {
+				if d.USBDebug {
+					log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+				}
+				return "", err
 			}
-			return "", err
+			descriptor = s
 		}
-		ids = append(ids, s)
+
+		ids = append(ids, descriptor)
 	}
 
 	return strings.Join(ids, " "), nil
