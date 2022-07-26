@@ -170,11 +170,14 @@ func (d *Device) Open() error {
 	d.claim()
 
 	if d.ifaceDescr.InterfaceStringIndex == 0 {
-		// Some of the win8phones have no interface field.
+		// Some devices have no interface field, so we'll hardcode ones
+		// that we know about. If this list gets too unwieldy, we may
+		// need to look into a more generic solution.
 		info := DeviceInfo{}
 		d.GetDeviceInfo(&info)
 
-		if !strings.Contains(info.MTPExtension, "microsoft/WindowsPhone") {
+		if !strings.Contains(info.MTPExtension, "microsoft/WindowsPhone") &&
+			!strings.Contains(info.MTPExtension, "fujifilm.co.jp") {
 			d.Close()
 			return fmt.Errorf("mtp: no MTP extensions in %s", info.MTPExtension)
 		}
