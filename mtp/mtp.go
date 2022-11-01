@@ -170,11 +170,14 @@ func (d *Device) Open() error {
 	d.claim()
 
 	if d.ifaceDescr.InterfaceStringIndex == 0 {
-		// Some of the win8phones have no interface field.
+		// Some devices have no interface field, so we'll hardcode ones
+		// that we know about. If this list gets too unwieldy, we may
+		// need to look into a more generic solution.
 		info := DeviceInfo{}
 		d.GetDeviceInfo(&info)
 
-		if !strings.Contains(info.MTPExtension, "microsoft/WindowsPhone") {
+		if !strings.Contains(info.MTPExtension, "microsoft/WindowsPhone") &&
+			!strings.Contains(info.MTPExtension, "fujifilm.co.jp") {
 			d.Close()
 			return fmt.Errorf("mtp: no MTP extensions in %s", info.MTPExtension)
 		}
@@ -210,14 +213,23 @@ func (d *Device) ID() (string, error) {
 		d.devDescr.Manufacturer,
 		d.devDescr.Product,
 		d.devDescr.SerialNumber} {
-		s, err := d.h.GetStringDescriptorASCII(b)
-		if err != nil {
-			if d.USBDebug {
-				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+		var descriptor string
+		if b == 0 {
+			// All three of the descriptors are optional.
+			// Index of 0 means the string is not available.
+			descriptor = ""
+		} else {
+			s, err := d.h.GetStringDescriptorASCII(b)
+			if err != nil {
+				if d.USBDebug {
+					log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+				}
+				return "", err
 			}
-			return "", err
+			descriptor = s
 		}
-		ids = append(ids, s)
+
+		ids = append(ids, descriptor)
 	}
 
 	return strings.Join(ids, " "), nil
@@ -295,21 +307,21 @@ func (d *Device) sendReq(req *Container) error {
 
 // Fetches one USB packet. The header is split off, and the remainder is returned.
 // dest should be at least 512bytes.
-func (d *Device) fetchPacket(dest []byte, header *usbBulkHeader) (rest []byte, err error) {
+func (d *Device) fetchPacket(dest []byte, header *usbBulkHeader) (rest []byte, bytesRead int, err error) {
 	n, err := d.h.BulkTransfer(d.fetchEP, dest[:d.fetchMaxPacketSize()], d.Timeout)
 	if n > 0 {
 		d.dataPrint(d.fetchEP, dest[:n])
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, n, err
 	}
 
 	buf := bytes.NewBuffer(dest[:n])
 	if err = binary.Read(buf, binary.LittleEndian, header); err != nil {
-		return nil, err
+		return nil, n, err
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes(), n, nil
 }
 
 func (d *Device) decodeRep(h *usbBulkHeader, rest []byte, rep *Container) error {
@@ -410,7 +422,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 	fetchPacketSize := d.fetchMaxPacketSize()
 	data := make([]byte, fetchPacketSize)
 	h := &usbBulkHeader{}
-	rest, err := d.fetchPacket(data[:], h)
+	rest, n, err := d.fetchPacket(data[:], h)
 	if err != nil {
 		return err
 	}
@@ -429,9 +441,10 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 
 		dest.Write(rest)
 
-		if len(rest)+usbHdrLen == fetchPacketSize {
-			// If this was a full packet, read until we
-			// have a short read.
+		if len(rest)+usbHdrLen == fetchPacketSize || uint32(n) < h.Length {
+			// If this was a full packet, or if the packet wasn't full but
+			// the device said it was sending more data than we received,
+			// continue reading until we have a read less than a full packet.
 			_, finalPacket, err = d.bulkRead(dest, progressCb)
 			if err != nil {
 				return err
@@ -447,7 +460,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 			finalBuf := bytes.NewBuffer(finalPacket[:len(finalPacket)])
 			err = binary.Read(finalBuf, binary.LittleEndian, h)
 		} else {
-			rest, err = d.fetchPacket(data[:], h)
+			rest, _, err = d.fetchPacket(data[:], h)
 		}
 	}
 
