@@ -442,6 +442,18 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 		dest.Write(rest)
 
 		if len(rest)+usbHdrLen == fetchPacketSize || uint32(n) < h.Length {
+			// Special case: From appendix H in the MTP 1.1 spec, the
+			// device can send a 12-byte packet followed by the rest of the
+			// data in a separate packet. After that point, both parties must
+			// follow the same rule.
+			// To detect this, if this is the first packet of a larger container
+			// data packet AND it's 12 bytes, set SeparateHeader to TRUE so we
+			// correctly send data back to the receiver.
+			if n == usbHdrLen && len(rest) == 0 && uint32(n) < h.Length {
+				log.Printf("Device appears to have split header/data. Switch to separate header mode.")
+				d.SeparateHeader = true
+			}
+
 			// If this was a full packet, or if the packet wasn't full but
 			// the device said it was sending more data than we received,
 			// continue reading until we have a read less than a full packet.
