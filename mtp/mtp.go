@@ -246,32 +246,44 @@ func (d *Device) GetUsbInfo() (*UsbDeviceInfo, error) {
 		Device:    d.devDescr.Device,
 	}
 
-	manufacturer, err := d.h.GetStringDescriptorASCII(d.devDescr.Manufacturer)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.Manufacturer != 0 {
+		manufacturer, err := d.h.GetStringDescriptorASCII(d.devDescr.Manufacturer)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.Manufacturer = manufacturer
+	} else {
+		ui.Manufacturer = ""
 	}
-	ui.Manufacturer = manufacturer
 
-	serialNumber, err := d.h.GetStringDescriptorASCII(d.devDescr.SerialNumber)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.SerialNumber != 0 {
+		serialNumber, err := d.h.GetStringDescriptorASCII(d.devDescr.SerialNumber)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.SerialNumber = serialNumber
+	} else {
+		ui.SerialNumber = ""
 	}
-	ui.SerialNumber = serialNumber
 
-	product, err := d.h.GetStringDescriptorASCII(d.devDescr.Product)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.Product != 0 {
+		product, err := d.h.GetStringDescriptorASCII(d.devDescr.Product)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.Product = product
+	} else {
+		ui.Product = ""
 	}
-	ui.Product = product
 
 	return &ui, nil
 }
@@ -442,6 +454,20 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 		dest.Write(rest)
 
 		if len(rest)+usbHdrLen == fetchPacketSize || uint32(n) < h.Length {
+			// Special case: From appendix H in the MTP 1.1 spec, the
+			// device can send a 12-byte packet followed by the rest of the
+			// data in a separate packet. After that point, both parties must
+			// follow the same rule.
+			// To detect this, if this is the first packet of a larger container
+			// data packet AND it's 12 bytes, set SeparateHeader to TRUE so we
+			// correctly send data back to the receiver.
+			if n == usbHdrLen && len(rest) == 0 && uint32(n) < h.Length {
+				d.SeparateHeader = true
+				if d.MTPDebug {
+					log.Printf("Device appears to have split header/data. Switched to separate header mode.")
+				}
+			}
+
 			// If this was a full packet, or if the packet wasn't full but
 			// the device said it was sending more data than we received,
 			// continue reading until we have a read less than a full packet.
