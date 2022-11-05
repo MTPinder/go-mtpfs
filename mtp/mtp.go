@@ -246,32 +246,44 @@ func (d *Device) GetUsbInfo() (*UsbDeviceInfo, error) {
 		Device:    d.devDescr.Device,
 	}
 
-	manufacturer, err := d.h.GetStringDescriptorASCII(d.devDescr.Manufacturer)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.Manufacturer != 0 {
+		manufacturer, err := d.h.GetStringDescriptorASCII(d.devDescr.Manufacturer)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.Manufacturer = manufacturer
+	} else {
+		ui.Manufacturer = ""
 	}
-	ui.Manufacturer = manufacturer
 
-	serialNumber, err := d.h.GetStringDescriptorASCII(d.devDescr.SerialNumber)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.SerialNumber != 0 {
+		serialNumber, err := d.h.GetStringDescriptorASCII(d.devDescr.SerialNumber)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.SerialNumber = serialNumber
+	} else {
+		ui.SerialNumber = ""
 	}
-	ui.SerialNumber = serialNumber
 
-	product, err := d.h.GetStringDescriptorASCII(d.devDescr.Product)
-	if err != nil {
-		if d.USBDebug {
-			log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+	if d.devDescr.Product != 0 {
+		product, err := d.h.GetStringDescriptorASCII(d.devDescr.Product)
+		if err != nil {
+			if d.USBDebug {
+				log.Printf("USB: GetStringDescriptorASCII, err: %v", err)
+			}
+			return nil, err
 		}
-		return nil, err
+		ui.Product = product
+	} else {
+		ui.Product = ""
 	}
-	ui.Product = product
 
 	return &ui, nil
 }
