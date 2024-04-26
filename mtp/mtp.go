@@ -426,7 +426,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 			TransactionID: req.TransactionID,
 		}
 
-		_, err := d.bulkWrite(&hdr, src, writeSize, progressCb)
+		_, err := d.bulkWrite(&hdr, src, writeSize, req, progressCb)
 		if err != nil {
 			return err
 		}
@@ -526,7 +526,7 @@ func (d *Device) dataPrint(ep byte, data []byte) {
 const rwBufSize = 0x4000
 
 // bulkWrite returns the number of non-header bytes written.
-func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, progressCb ProgressFunc) (n int64, err error) {
+func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, req *Container, progressCb ProgressFunc) (n int64, err error) {
 	totalSize := size
 	packetSize := d.sendMaxPacketSize()
 	if hdr != nil {
@@ -596,7 +596,11 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, progress
 
 	if lastTransfer%packetSize == 0 {
 		// write a short packet just to be sure.
-		d.h.BulkTransfer(d.sendEP, buf[:0], d.Timeout)
+		tOut := d.Timeout
+		if req.Code == OC_SendObjectInfo {
+			tOut = 250
+		}
+		d.h.BulkTransfer(d.sendEP, buf[:0], tOut)
 	}
 
 	return n, err
