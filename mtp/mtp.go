@@ -596,11 +596,7 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, req *Con
 
 	if lastTransfer%packetSize == 0 {
 		// write a short packet just to be sure.
-		tOut := d.Timeout
-		if req.Code == OC_SendObjectInfo {
-			tOut = 250
-		}
-		d.h.BulkTransfer(d.sendEP, buf[:0], tOut)
+		d.h.BulkTransfer(d.sendEP, buf[:0], 250)
 	}
 
 	return n, err
