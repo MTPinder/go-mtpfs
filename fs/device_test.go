@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MTPinder/go-mtpfs/mtp"
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 // VerboseTest returns true if the testing framework is run with -v.

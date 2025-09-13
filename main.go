@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/MTPinder/go-mtpfs/fs"
+	"github.com/MTPinder/go-mtpfs/mtp"
 	fusefs "github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/mallardluna/go-mtpfs/fs"
-	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 func main() {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mallardluna/usb"
+	"github.com/MTPinder/usb"
 )
 
 // An MTP device.
