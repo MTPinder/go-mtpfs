@@ -45,7 +45,7 @@ func (n *androidNode) endEdit() bool {
 		return true
 	}
 
-	dt := time.Now().Sub(n.start)
+	dt := time.Since(n.start)
 	log.Printf("%d bytes in %v: %d mb/s",
 		n.byteCount, dt, (1e3*n.byteCount)/(dt.Nanoseconds()))
 

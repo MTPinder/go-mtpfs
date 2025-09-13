@@ -39,8 +39,8 @@ const objInfoStr = `0100 0100
 0031 0039 0031 0031 0033 0030 0000 0000`
 
 func parseHex(s string) []byte {
-	hex := strings.Replace(s, " ", "", -1)
-	hex = strings.Replace(hex, "\n", "", -1)
+	hex := strings.ReplaceAll(s, " ", "")
+	hex = strings.ReplaceAll(hex, "\n", "")
 	buf := bytes.NewBufferString(hex)
 	bin := make([]byte, len(hex)/2)
 
@@ -55,12 +55,9 @@ func parseHex(s string) []byte {
 }
 
 func diffIndex(a, b []byte) error {
-	l := len(b)
-	if len(a) < len(b) {
-		l = len(a)
-	}
+	l := min(len(a), len(b))
 
-	for i := 0; i < l; i++ {
+	for i := range l {
 		if a[i] != b[i] {
 			return fmt.Errorf("data idx 0x%x got %x want %x",
 				i, a[i], b[i])
@@ -136,7 +133,7 @@ func TestEncodeStrEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected encode error %v", err)
 	}
-	if string(b.Bytes()) != "\000" {
+	if b.String() != "\000" {
 		t.Fatalf("string encode mismatch %q ", b.Bytes())
 	}
 }
@@ -264,7 +261,7 @@ func TestEncodeStr(t *testing.T) {
 
 	if out, err := encodeStr(nil, str); err != nil {
 		t.Fatalf("encodeStr: %v", err)
-	} else if bytes.Compare(out, mtpStr) != 0 {
+	} else if !bytes.Equal(out, mtpStr) {
 		t.Fatalf("got %q, want %q", out, mtpStr)
 	}
 }

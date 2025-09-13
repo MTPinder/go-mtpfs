@@ -3,7 +3,6 @@ package fs
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"syscall"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/ganeshrvel/go-mtpfs/mtp"
+	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 type classicNode struct {
@@ -98,7 +97,7 @@ func (n *classicNode) send() error {
 		log.Printf("SendObject failed %v", err)
 		return syscall.EINVAL
 	}
-	dt := time.Now().Sub(start)
+	dt := time.Since(start)
 	log.Printf("sent %d bytes in %d ms. %.1f MB/s", fi.Size(),
 		dt.Nanoseconds()/1e6, 1e3*float64(fi.Size())/float64(dt.Nanoseconds()))
 	n.dirty = false
@@ -144,7 +143,7 @@ func (n *classicNode) fetch() error {
 		return err
 	}
 
-	f, err := ioutil.TempFile(n.fs.options.Dir, "")
+	f, err := os.CreateTemp(n.fs.options.Dir, "")
 	if err != nil {
 		return err
 	}
@@ -153,7 +152,7 @@ func (n *classicNode) fetch() error {
 
 	start := time.Now()
 	err = n.fs.dev.GetObject(n.Handle(), f, mtp.EmptyProgressFunc)
-	dt := time.Now().Sub(start)
+	dt := time.Since(start)
 	if err == nil {
 		n.backing = f.Name()
 		n.dirty = false
@@ -343,7 +342,7 @@ func (fs *deviceFS) ensureFreeSpace(want int64) error {
 func (fs *deviceFS) setupClassic() error {
 	if fs.options.Dir == "" {
 		var err error
-		fs.options.Dir, err = ioutil.TempDir(os.TempDir(), "go-mtpfs")
+		fs.options.Dir, err = os.MkdirTemp(os.TempDir(), "go-mtpfs")
 		if err != nil {
 			return err
 		}
@@ -356,7 +355,7 @@ func (fs *deviceFS) setupClassic() error {
 }
 
 func (dfs *deviceFS) createClassicFile(obj mtp.ObjectInfo) (file fs.FileHandle, node fs.InodeEmbedder, err error) {
-	backingFile, err := ioutil.TempFile(dfs.options.Dir, "")
+	backingFile, err := os.CreateTemp(dfs.options.Dir, "")
 	cl := &classicNode{
 		mtpNodeImpl: mtpNodeImpl{
 			obj: &obj,

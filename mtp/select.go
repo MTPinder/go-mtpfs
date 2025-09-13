@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ganeshrvel/usb"
+	"github.com/mallardluna/usb"
 )
 
 func candidateFromDeviceDescriptor(d *usb.Device) *Device {

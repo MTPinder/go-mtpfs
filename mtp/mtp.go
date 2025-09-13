@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ganeshrvel/usb"
+	"github.com/mallardluna/usb"
 )
 
 // An MTP device.
@@ -297,9 +297,7 @@ func (d *Device) sendReq(req *Container) error {
 			TransactionID: req.TransactionID,
 		},
 	}
-	for i := range req.Param {
-		c.Param[i] = req.Param[i]
-	}
+	copy(c.Param[:], req.Param)
 
 	var wData [usbBulkLen]byte
 	buf := bytes.NewBuffer(wData[:0])
@@ -350,7 +348,7 @@ func (d *Device) decodeRep(h *usbBulkHeader, rest []byte, rep *Container) error 
 			restLen, len(rest))
 	}
 	nParam := restLen / 4
-	for i := 0; i < nParam; i++ {
+	for i := range nParam {
 		rep.Param = append(rep.Param, byteOrder.Uint32(rest[4*i:]))
 	}
 
@@ -483,7 +481,7 @@ func (d *Device) runTransaction(req *Container, rep *Container,
 				log.Printf("Reusing final packet")
 			}
 			rest = finalPacket
-			finalBuf := bytes.NewBuffer(finalPacket[:len(finalPacket)])
+			finalBuf := bytes.NewBuffer(finalPacket[:])
 			err = binary.Read(finalBuf, binary.LittleEndian, h)
 		} else {
 			rest, _, err = d.fetchPacket(data[:], h)
@@ -526,7 +524,7 @@ func (d *Device) dataPrint(ep byte, data []byte) {
 const rwBufSize = 0x4000
 
 // bulkWrite returns the number of non-header bytes written.
-func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, req *Container, progressCb ProgressFunc) (n int64, err error) {
+func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, _ *Container, progressCb ProgressFunc) (n int64, err error) {
 	totalSize := size
 	packetSize := d.sendMaxPacketSize()
 	if hdr != nil {
@@ -546,10 +544,7 @@ func (d *Device) bulkWrite(hdr *usbBulkHeader, r io.Reader, size int64, req *Con
 
 		buf := bytes.NewBuffer(packet[:0])
 		binary.Write(buf, byteOrder, hdr)
-		cpSize := int64(len(packet) - usbHdrLen)
-		if cpSize > size {
-			cpSize = size
-		}
+		cpSize := min(int64(len(packet)-usbHdrLen), size)
 
 		_, err = io.CopyN(buf, r, cpSize)
 		d.dataPrint(d.sendEP, buf.Bytes())

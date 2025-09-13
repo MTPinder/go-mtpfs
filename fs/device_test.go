@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -16,17 +15,13 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/ganeshrvel/go-mtpfs/mtp"
+	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 // VerboseTest returns true if the testing framework is run with -v.
 func VerboseTest() bool {
 	flag := flag.Lookup("test.v")
 	return flag != nil && flag.Value.String() == "true"
-}
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
 }
 
 func startFs(t *testing.T, useAndroid bool) (storageRoot string, cleanup func()) {
@@ -51,7 +46,7 @@ func startFs(t *testing.T, useAndroid bool) (storageRoot string, cleanup func())
 	if len(sids) == 0 {
 		t.Fatal("no storages found. Unlock device?")
 	}
-	tempdir, err := ioutil.TempDir("", "mtpfs")
+	tempdir, err := os.MkdirTemp("", "mtpfs")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,13 +76,13 @@ func startFs(t *testing.T, useAndroid bool) (storageRoot string, cleanup func())
 	go server.Serve()
 	server.WaitMount()
 
-	for i := 0; i < 10; i++ {
-		fis, err := ioutil.ReadDir(tempdir)
+	for range 10 {
+		fis, err := os.ReadDir(tempdir)
 		if err == nil && len(fis) > 0 {
 			storageRoot = filepath.Join(tempdir, fis[0].Name())
 			break
 		}
-		time.Sleep(1)
+		time.Sleep(1 * time.Second)
 	}
 
 	if storageRoot == "" {
@@ -126,11 +121,11 @@ func testDevice(t *testing.T, useAndroid bool) {
 		t.Fatalf("Mkdir: %v", err)
 	}
 
-	if _, err := ioutil.ReadDir(dirName); err != nil {
+	if _, err := os.ReadDir(dirName); err != nil {
 		t.Fatalf("ReadDir: %v", err)
 	}
 
-	if err := ioutil.WriteFile(dirName+"/subfile", []byte{42}, 0644); err != nil {
+	if err := os.WriteFile(dirName+"/subfile", []byte{42}, 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
@@ -146,11 +141,11 @@ func testDevice(t *testing.T, useAndroid bool) {
 	}
 	name := filepath.Join(root, fmt.Sprintf("mtpfs-test-%x", rand.Int31()))
 	golden := "abcpxq134"
-	if err := ioutil.WriteFile(name, []byte("abcpxq134"), 0644); err != nil {
+	if err := os.WriteFile(name, []byte("abcpxq134"), 0644); err != nil {
 		t.Fatal("WriteFile failed", err)
 	}
 	defer os.Remove(name)
-	got, err := ioutil.ReadFile(name)
+	got, err := os.ReadFile(name)
 	if err != nil {
 		t.Fatal("ReadFile failed", err)
 	}
@@ -180,7 +175,7 @@ func testDevice(t *testing.T, useAndroid bool) {
 		t.Fatal("Close failed", err)
 	}
 
-	got, err = ioutil.ReadFile(name)
+	got, err = os.ReadFile(name)
 	if err != nil {
 		t.Fatal("ReadFile failed", err)
 	}
@@ -221,7 +216,7 @@ func testReadBlockBoundary(t *testing.T, android bool) {
 
 	page := 4096
 	buf := bytes.Repeat([]byte("a"), 32*page)
-	if err := ioutil.WriteFile(name, buf, 0644); err != nil {
+	if err := os.WriteFile(name, buf, 0644); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
 

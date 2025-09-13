@@ -8,14 +8,15 @@ import (
 	"flag"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
 	fusefs "github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/ganeshrvel/go-mtpfs/fs"
-	"github.com/ganeshrvel/go-mtpfs/mtp"
+	"github.com/mallardluna/go-mtpfs/fs"
+	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 	}
 	defer dev.Close()
 	debugs := map[string]bool{}
-	for _, s := range strings.Split(*debug, ",") {
+	for s := range strings.SplitSeq(*debug, ",") {
 		debugs[s] = true
 	}
 	dev.MTPDebug = debugs["mtp"]
@@ -55,6 +56,16 @@ func main() {
 	sids, err := fs.SelectStorages(dev, *storageFilter)
 	if err != nil {
 		log.Fatalf("selectStorages failed: %v", err)
+	}
+
+	if len(sids) < 1 {
+		log.Printf("No storages found")
+		log.Printf("Retrying in 5 seconds...")
+		time.Sleep(5 * time.Second)
+		err := syscall.Exec(os.Args[0], os.Args, os.Environ())
+		if err != nil {
+			log.Fatalf("restart failed: %v", err)
+		}
 	}
 
 	opts := fs.DeviceFsOptions{
@@ -85,6 +96,18 @@ func main() {
 
 	server.WaitMount()
 	log.Printf("FUSE mounted")
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		err := server.Unmount()
+		if err != nil {
+			log.Fatalf("mount failed: %v", err)
+		}
+		log.Printf("FUSE unmounted")
+	}()
+
 	server.Wait()
 	root.OnUnmount()
 }

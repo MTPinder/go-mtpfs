@@ -16,7 +16,7 @@ import (
 
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/ganeshrvel/go-mtpfs/mtp"
+	"github.com/mallardluna/go-mtpfs/mtp"
 )
 
 const blockSize = 512
@@ -192,7 +192,7 @@ func (n *rootNode) Statfs(ctx context.Context, out *fuse.StatfsOut) syscall.Errn
 const forbidden = ":*?\"<>|"
 
 func SanitizeDosName(name string) string {
-	if strings.IndexAny(name, forbidden) == -1 {
+	if !strings.ContainsAny(name, forbidden) {
 		return name
 	}
 	dest := make([]byte, len(name))

@@ -309,7 +309,7 @@ func encodeField(w io.Writer, f reflect.Value) error {
 }
 
 // Decode MTP data stream into data structure.
-func Decode(r io.Reader, iface interface{}) error {
+func Decode(r io.Reader, iface any) error {
 	decoder, ok := iface.(Decoder)
 	if ok {
 		return decoder.Decode(r)
@@ -319,9 +319,9 @@ func Decode(r io.Reader, iface interface{}) error {
 	return decodeWithSelector(r, iface, typeSel)
 }
 
-func decodeWithSelector(r io.Reader, iface interface{}, typeSel DataTypeSelector) error {
+func decodeWithSelector(r io.Reader, iface any, typeSel DataTypeSelector) error {
 	val := reflect.ValueOf(iface)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return fmt.Errorf("need ptr argument: %T", iface)
 	}
 	val = val.Elem()
@@ -340,16 +340,16 @@ func decodeWithSelector(r io.Reader, iface interface{}, typeSel DataTypeSelector
 }
 
 // Encode MTP data stream into data structure.
-func Encode(w io.Writer, iface interface{}) error {
+func Encode(w io.Writer, iface any) error {
 	encoder, ok := iface.(Encoder)
 	if ok {
 		return encoder.Encode(w)
 	}
 
 	val := reflect.ValueOf(iface)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		msg := fmt.Sprintf("need ptr argument: %T", iface)
-		return fmt.Errorf(msg)
+		return fmt.Errorf("%s", msg)
 		//panic("need ptr argument: %T")
 	}
 	val = val.Elem()
@@ -366,7 +366,7 @@ func Encode(w io.Writer, iface interface{}) error {
 
 // Instantiates an object of wanted type as addressable value.
 func InstantiateType(t DataTypeSelector) reflect.Value {
-	var val interface{}
+	var val any
 	switch t {
 	case DTC_INT8:
 		v := int8(0)
@@ -409,12 +409,13 @@ func InstantiateType(t DataTypeSelector) reflect.Value {
 }
 
 func decodePropDescForm(r io.Reader, selector DataTypeSelector, formFlag uint8) (DataDependentType, error) {
-	if formFlag == DPFF_Range {
+	switch formFlag {
+	case DPFF_Range:
 		f := PropDescRangeForm{}
 		err := decodeWithSelector(r, reflect.ValueOf(&f).Interface(),
 			selector)
 		return &f, err
-	} else if formFlag == DPFF_Enumeration {
+	case DPFF_Enumeration:
 		f := PropDescEnumForm{}
 		err := decodeWithSelector(r, reflect.ValueOf(&f).Interface(),
 			selector)
